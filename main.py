@@ -4,7 +4,7 @@ import requests
 
 app = FastAPI()
 
-VIDEO_URL = "http://saga10.pro:80/345715/562156/2639316"  # substitua pelo seu link real
+VIDEO_URL = "http://solard2.metag.click:80/movie/729767765/551952986/4667973.mp4"  # substitua pelo seu link real
 
 @app.get("/video")
 def stream_ts_video():
