@@ -4,7 +4,7 @@ import requests
 app = FastAPI()
 
 # Link fixo do vídeo (pode ser .mp4 ou .ts)
-VIDEO_URL = "https://www.example.com/video.mp4"
+VIDEO_URL = "http://saga10.pro:80/345715/562156/2639316"
 
 @app.get("/video")
 def stream_video():
@@ -14,8 +14,8 @@ def stream_video():
             return Response(content="Erro ao acessar o vídeo", status_code=502)
 
         headers = {
-            "Content-Type": "video/mp4",  # ou "video/MP2T" para .ts
-            "Content-Disposition": "inline; filename=video.mp4"
+            "Content-Type": "video/MP2T",  # ou "video/MP2T" para .ts
+            "Content-Disposition": "inline; filename=video/MP2T"
         }
 
         return Response(content=video_response.raw, headers=headers, media_type="video/mp4")
