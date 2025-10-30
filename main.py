@@ -8,7 +8,7 @@ app = FastAPI()
 VIDEO_URL_MP4 = "http://solard2.metag.click:80/movie/729767765/551952986/4667973.mp4"
 
 # Link direto para o vídeo TS (HLS)
-VIDEO_URL_TS = "http://solard2.metag.click:80/729767765/551952986/4666509.ts"
+VIDEO_URL_TS = "http://solard2.metag.click:80/729767765/551952986/4666509"
 
 @app.get("/video")
 def stream_mp4_video():
@@ -38,6 +38,7 @@ def stream_mp4_video():
             media_type="text/plain"
         )
 
+
 @app.get("/tv")
 def stream_ts_video():
     try:
@@ -56,7 +57,10 @@ def stream_ts_video():
 
         return StreamingResponse(
             video_response.iter_content(chunk_size=1024),
-            media_type="video/MP2T"
+            media_type="video/MP2T",
+            headers={
+                "Content-Disposition": "attachment; filename=tv.ts"
+            }
         )
 
     except Exception as e:
