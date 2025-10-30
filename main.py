@@ -140,7 +140,7 @@ class Canal(BaseModel):
 def get_mongo_collection():
     try:
         client = MongoClient(
-            "mongodb+srv://teste:teste@cluster0.zjhbafz.mongodb.net/?retryWrites=true&w=majority",
+            "mongodb+srv://teste:teste@cluster0.zjhbafz.mongodb.net/M3U?retryWrites=true&w=majority",
             serverSelectionTimeoutMS=5000  # timeout de conexão
         )
         db = client["M3U"]
