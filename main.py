@@ -5,6 +5,7 @@ import requests
 from pymongo import MongoClient, errors
 from pydantic import BaseModel
 from typing import List
+from bson import ObjectId
 
 
 app = FastAPI()
@@ -132,9 +133,12 @@ async def stream_mp4_video(request: Request):
 
 # Modelo de dados
 class Canal(BaseModel):
-    Name: str | None
-    Group: str | None
+    IdVideo: str | None
+    Nome: str | None
+    Grupo: str | None
     Url: str | None
+    Logo: str | None
+   
 
 # Conexão com MongoDB Atlas
 def get_mongo_collection():
@@ -166,11 +170,11 @@ def listar_canais(
 
         filtro = {}
         if group:
-            filtro["group"] = {"$regex": group, "$options": "i"}
+            filtro["Grupo"] = {"$regex": group, "$options": "i"}
         if name:
-            filtro["name"] = {"$regex": name, "$options": "i"}
+            filtro["Nome"] = {"$regex": name, "$options": "i"}
 
-        canais = list(colecao.find(filtro, {"_id": 0}).skip(skip).limit(limit))
+        canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1}).skip(skip).limit(limit))
 
         if not canais:
             raise HTTPException(status_code=404, detail="Nenhum canal encontrado com os filtros aplicados.")
@@ -179,3 +183,76 @@ def listar_canais(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar canais: {str(e)}")
+
+
+
+
+@app.get("/player/{idvideo}")
+async def stream_mp4_video(idvideo: str, request: Request):
+    try:
+        # busca a URL no Mongo (tenta campo IdVideo, depois _id)
+        colecao = get_mongo_collection()
+        doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 1})
+        if not doc:
+            try:
+                oid = ObjectId(idvideo)
+                doc = colecao.find_one({"_id": oid}, {"Url": 1, "_id": 1})
+            except Exception:
+                doc = None
+
+        if not doc:
+            raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+
+        video_url = doc.get("Url") or doc.get("url")
+        if not video_url:
+            raise HTTPException(status_code=404, detail="URL do vídeo não encontrada no documento")
+
+        headers = {"User-Agent": "Mozilla/5.0"}
+
+        # repassa o header Range do cliente para o upstream quando presente
+        range_header = request.headers.get("range")
+        if range_header:
+            headers["Range"] = range_header
+
+        # faz a requisição ao servidor do vídeo com suporte a stream
+        video_response = requests.get(video_url, stream=True, headers=headers, timeout=15)
+
+        if video_response.status_code not in (200, 206):
+            return StreamingResponse(
+                content=iter([f"Erro ao acessar o vídeo MP4: {video_response.status_code}".encode()]),
+                status_code=502,
+                media_type="text/plain"
+            )
+
+        response_headers = {"Accept-Ranges": "bytes"}
+        if "Content-Length" in video_response.headers:
+            response_headers["Content-Length"] = video_response.headers["Content-Length"]
+        if "Content-Range" in video_response.headers:
+            response_headers["Content-Range"] = video_response.headers["Content-Range"]
+        if "Content-Type" in video_response.headers:
+            content_type = video_response.headers["Content-Type"]
+        else:
+            content_type = "video/mp4"
+
+        # Retorna o stream bruto do requests (raw) para o cliente com status adequado
+        return StreamingResponse(
+            video_response.raw,
+            status_code=(206 if range_header else 200),
+            media_type=content_type,
+            headers=response_headers
+        )
+
+    except requests.exceptions.RequestException as e:
+        return StreamingResponse(
+            content=iter([f"Erro de rede ao acessar o vídeo: {str(e)}".encode()]),
+            status_code=504,
+            media_type="text/plain"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        return StreamingResponse(
+            content=iter([f"Erro interno: {str(e)}".encode()]),
+            status_code=500,
+            media_type="text/plain"
+        )
