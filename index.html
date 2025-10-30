@@ -9,6 +9,11 @@
   <h1>📺 Vídeo HLS (.ts via .m3u8)</h1>
   <video id="video" controls width="720" height="400"></video>
 
+  <video controls width="720" height="400">
+  <source src="https://backendtvsilver.onrender.com/video" type="video/mp4">
+  Seu navegador não suporta vídeo MP4.
+</video>
+
   <script>
     const video = document.getElementById('video');
     const hls = new Hls();
