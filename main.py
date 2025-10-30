@@ -38,6 +38,30 @@ def stream_mp4_video():
             media_type="text/plain"
         )
 
+@app.get("/videoranger")
+async def stream_mp4_video(request: Request):
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    # Captura o cabeçalho Range enviado pelo navegador
+    range_header = request.headers.get("range")
+    if range_header:
+        headers["Range"] = range_header
+
+    video_response = requests.get(VIDEO_URL_MP4, stream=True, headers=headers)
+
+    # Define os headers corretos para streaming
+    return StreamingResponse(
+        video_response.raw,
+        status_code=206 if range_header else 200,
+        media_type="video/mp4",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": video_response.headers.get("Content-Length", ""),
+            "Content-Range": video_response.headers.get("Content-Range", "")
+        }
+    )
 
 @app.get("/tv")
 def stream_ts_video():
