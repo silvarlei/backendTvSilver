@@ -132,9 +132,9 @@ async def stream_mp4_video(request: Request):
 
 # Modelo de dados
 class Canal(BaseModel):
-    name: str | None
-    group: str | None
-    url: str | None
+    Name: str | None
+    Group: str | None
+    Url: str | None
 
 # Conexão com MongoDB Atlas
 def get_mongo_collection():
