@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Player HLS</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <h1>📺 Vídeo HLS (.ts via .m3u8)</h1>
+  <video id="video" controls width="720" height="400"></video>
+
+  <script>
+    const video = document.getElementById('video');
+    const hls = new Hls();
+    const m3u8Url = "http://solard2.metag.click:80/729767765/551952986/4666509"; // precisa retornar .m3u8
+
+    hls.loadSource(m3u8Url);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, function () {
+      video.play();
+    });
+  </script>
+</body>
+</html>
