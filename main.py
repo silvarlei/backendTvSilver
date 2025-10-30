@@ -152,13 +152,28 @@ def get_mongo_collection():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
+
+
 @app.get("/canais", response_model=List[Canal])
-def listar_canais():
+def listar_canais(
+    group: str | None = Query(default=None, description="Filtrar por grupo"),
+    name: str | None = Query(default=None, description="Filtrar por nome"),
+    limit: int = Query(default=10, ge=1, le=100, description="Número máximo de canais"),
+    skip: int = Query(default=0, ge=0, description="Número de canais a pular")
+):
     try:
         colecao = get_mongo_collection()
-        canais = list(colecao.find({}, {"_id": 0}))
+
+        filtro = {}
+        if group:
+            filtro["group"] = {"$regex": group, "$options": "i"}
+        if name:
+            filtro["name"] = {"$regex": name, "$options": "i"}
+
+        canais = list(colecao.find(filtro, {"_id": 0}).skip(skip).limit(limit))
+
         if not canais:
-            raise HTTPException(status_code=404, detail="Nenhum canal encontrado.")
+            raise HTTPException(status_code=404, detail="Nenhum canal encontrado com os filtros aplicados.")
         return canais
     except HTTPException as e:
         raise e
