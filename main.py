@@ -5,7 +5,7 @@ import requests
 app = FastAPI()
 
 # Link direto para o vídeo MP4
-VIDEO_URL_MP4 = "http://solard2.metag.click:80/movie/729767765/551952986/4244413.mp4"
+VIDEO_URL_MP4 = "http://solard2.metag.click:80/movie/729767765/551952986/4667973.mp4"
 
 # Link direto para o vídeo TS (HLS)
 VIDEO_URL_TS = "http://solard2.metag.click:80/729767765/551952986/4666509"
