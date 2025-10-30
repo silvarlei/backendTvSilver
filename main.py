@@ -1,6 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse
 import requests
+
+from pymongo import MongoClient, errors
+from pydantic import BaseModel
+from typing import List
 
 
 app = FastAPI()
@@ -122,3 +126,41 @@ async def stream_mp4_video(request: Request):
             status_code=500,
             media_type="text/plain"
         )
+
+
+
+
+# Modelo de dados
+class Canal(BaseModel):
+    name: str | None
+    group: str | None
+    url: str | None
+
+# Conexão com MongoDB Atlas
+def get_mongo_collection():
+    try:
+        client = MongoClient(
+            "mongodb+srv://teste:teste@cluster0.zjhbafz.mongodb.net/?retryWrites=true&w=majority",
+            serverSelectionTimeoutMS=5000  # timeout de conexão
+        )
+        db = client["M3U"]
+        return db["canais"]
+    except errors.ServerSelectionTimeoutError:
+        raise HTTPException(status_code=503, detail="Não foi possível conectar ao MongoDB Atlas.")
+    except errors.ConfigurationError:
+        raise HTTPException(status_code=500, detail="Erro na configuração da string de conexão.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
+
+@app.get("/canais", response_model=List[Canal])
+def listar_canais():
+    try:
+        colecao = get_mongo_collection()
+        canais = list(colecao.find({}, {"_id": 0}))
+        if not canais:
+            raise HTTPException(status_code=404, detail="Nenhum canal encontrado.")
+        return canais
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar canais: {str(e)}")
