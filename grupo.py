@@ -44,6 +44,22 @@ def distinct_grupos_case_insensitive() -> List[str]:
     grupos = [r["exemplo"] for r in results if r.get("exemplo")]
     return grupos
 
+# @app.get("/grupos", response_model=List[str])
+# def listar_grupos(case_insensitive: Optional[bool] = Query(False, description="Agrupar ignorando caixa")):
+#     try:
+        
+#         if case_insensitive:
+#             grupos = distinct_grupos_case_insensitive()
+#         else:
+#             grupos = distinct_grupos()
+#         if not grupos:
+#             raise HTTPException(status_code=404, detail="Nenhum grupo encontrado")
+#         return grupos
+#     except errors.PyMongoError as e:
+#         raise HTTPException(status_code=500, detail=f"Erro no MongoDB: {e}")
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/grupos", response_model=List[str])
 def listar_grupos(case_insensitive: Optional[bool] = Query(False, description="Agrupar ignorando caixa")):
     try:
