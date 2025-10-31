@@ -1,3 +1,4 @@
+from atualizaBase import build_groups_and_update_canais
 from fastapi import FastAPI, Query, HTTPException
 from typing import List, Optional
 from pymongo import MongoClient, errors
@@ -9,7 +10,7 @@ app = FastAPI(title="API Canais")
            
 MONGO_URI = "mongodb+srv://teste:teste@cluster0.zjhbafz.mongodb.net/M3U?retryWrites=true&w=majority"
 DB_NAME = "M3U"
-COLLECTION_NAME = "canais"
+COLLECTION_NAME = "grupos"
 
 def get_mongo_collection() -> Collection:
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
@@ -46,6 +47,7 @@ def distinct_grupos_case_insensitive() -> List[str]:
 @app.get("/grupos", response_model=List[str])
 def listar_grupos(case_insensitive: Optional[bool] = Query(False, description="Agrupar ignorando caixa")):
     try:
+        
         if case_insensitive:
             grupos = distinct_grupos_case_insensitive()
         else:

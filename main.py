@@ -140,6 +140,7 @@ class Canal(BaseModel):
     Grupo: str | None
     Url: str | None
     Logo: str | None
+    grupoID: str | None
    
 
 # Conexão com MongoDB Atlas
@@ -159,11 +160,29 @@ def get_mongo_collection():
         raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
 
+# Conexão com MongoDB Atlas
+def get_mongo_collection_grupo():
+    try:
+        client = MongoClient(
+            "mongodb+srv://teste:teste@cluster0.zjhbafz.mongodb.net/M3U?retryWrites=true&w=majority",
+            serverSelectionTimeoutMS=5000  # timeout de conexão
+        )
+        db = client["M3U"]
+        return db["grupos"]
+    except errors.ServerSelectionTimeoutError:
+        raise HTTPException(status_code=503, detail="Não foi possível conectar ao MongoDB Atlas.")
+    except errors.ConfigurationError:
+        raise HTTPException(status_code=500, detail="Erro na configuração da string de conexão.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
+
+
 
 @app.get("/canais", response_model=List[Canal])
 def listar_canais(
     group: str | None = Query(default=None, description="Filtrar por grupo"),
     name: str | None = Query(default=None, description="Filtrar por nome"),
+    groupid: str | None = Query(default=None, description="Filtrar por groupid"),
     limit: int = Query(default=10, ge=1, le=100, description="Número máximo de canais"),
     skip: int = Query(default=0, ge=0, description="Número de canais a pular")
 ):
@@ -172,11 +191,13 @@ def listar_canais(
 
         filtro = {}
         if group:
-            filtro["Grupo"] = {"$regex": group, "$options": "i"}
+            filtro["Grupo"] = {"$regex":group, "$options": "i"}
         if name:
             filtro["Nome"] = {"$regex": name, "$options": "i"}
+        if groupid:
+            filtro["grupoID"] = {"$regex": groupid, "$options": "i"}
 
-        canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1}).skip(skip).limit(limit))
+        canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1,"grupoID":1}).skip(skip).limit(limit))
 
         if not canais:
             raise HTTPException(status_code=404, detail="Nenhum canal encontrado com os filtros aplicados.")
@@ -321,16 +342,27 @@ async def stream_mp4_video(idvideo: str, request: Request):
     status = 206 if client_range else 200
     return StreamingResponse(iter_chunks(), status_code=status, media_type=resp_headers["Content-Type"], headers=resp_headers)
 
-@app.get("/grupos", response_model=List[str])
+
+# Modelo de dados
+class Grupo(BaseModel):
+    nome: str | None
+    grupoID: str | None
+
+@app.get("/grupos", response_model=List[Grupo])
 def listar_grupos(case_insensitive: gru.Optional[bool] = Query(False, description="Agrupar ignorando caixa")):
+             
     try:
-        if case_insensitive:
-            grupos = esp.limpar_emoticons_e_espacos(gru.distinct_grupos_case_insensitive())
-        else:
-            grupos = esp.limpar_emoticons_e_espacos( gru.distinct_grupos())
-        if not grupos:
-            raise HTTPException(status_code=404, detail="Nenhum grupo encontrado")
-        return grupos
+
+        colecao = get_mongo_collection_grupo()
+        grupos = list(colecao.find("",{ "nome": 1, "grupoID":1}))
+        return grupos  
+        # if case_insensitive:
+        #     grupos = esp.limpar_emoticons_e_espacos(gru.distinct_grupos_case_insensitive())
+        # else:
+        #     grupos = esp.limpar_emoticons_e_espacos( gru.distinct_grupos())
+        # if not grupos:
+        #     raise HTTPException(status_code=404, detail="Nenhum grupo encontrado")
+        # return grupos
     except errors.PyMongoError as e:
         raise HTTPException(status_code=500, detail=f"Erro no MongoDB: {e}")
     except Exception as e:
