@@ -6,7 +6,9 @@ from pymongo import MongoClient, errors
 from pydantic import BaseModel
 from typing import List
 from bson import ObjectId
-
+from typing import List
+import grupo as gru
+import espacos as esp
 
 app = FastAPI()
 
@@ -318,3 +320,18 @@ async def stream_mp4_video(idvideo: str, request: Request):
 
     status = 206 if client_range else 200
     return StreamingResponse(iter_chunks(), status_code=status, media_type=resp_headers["Content-Type"], headers=resp_headers)
+
+@app.get("/grupos", response_model=List[str])
+def listar_grupos(case_insensitive: gru.Optional[bool] = Query(False, description="Agrupar ignorando caixa")):
+    try:
+        if case_insensitive:
+            grupos = esp.limpar_emoticons_e_espacos(gru.distinct_grupos_case_insensitive())
+        else:
+            grupos = esp.limpar_emoticons_e_espacos( gru.distinct_grupos())
+        if not grupos:
+            raise HTTPException(status_code=404, detail="Nenhum grupo encontrado")
+        return grupos
+    except errors.PyMongoError as e:
+        raise HTTPException(status_code=500, detail=f"Erro no MongoDB: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
