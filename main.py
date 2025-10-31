@@ -275,11 +275,11 @@ def listar_canais(
 @app.get("/player/{idvideo}")
 async def stream_mp4_video(idvideo: str, request: Request):
     colecao = get_mongo_collection()
-    doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 1})
+    doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
-    video_url = doc.get("Url")
 
+    video_url = doc["Url"]
     headers = {"User-Agent": "Mozilla/5.0"}
     client_range = request.headers.get("range")
     if client_range:
@@ -287,33 +287,32 @@ async def stream_mp4_video(idvideo: str, request: Request):
 
     upstream = requests.get(video_url, stream=True, headers=headers, timeout=20)
 
+    content_length = upstream.headers.get("Content-Length")
+    content_type = "video/mp4; codecs=\"avc1.42E01E, mp4a.40.2\""
+
     resp_headers = {
         "Accept-Ranges": "bytes",
-        "Content-Type": upstream.headers.get("Content-Type", "video/mp4"),
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Range",
         "Access-Control-Expose-Headers": "Content-Range, Content-Length, Accept-Ranges",
+        "Content-Disposition": 'inline; filename="video.mp4"',
+        "Content-Encoding": "identity",
+        "Content-Type": content_type,
     }
 
     if "Content-Range" in upstream.headers:
         resp_headers["Content-Range"] = upstream.headers["Content-Range"]
-    elif "Content-Length" in upstream.headers:
-        length = upstream.headers["Content-Length"]
-        resp_headers["Content-Range"] = f"bytes 0-{int(length)-1}/{length}"
+    elif content_length:
+        resp_headers["Content-Range"] = f"bytes 0-{int(content_length)-1}/{content_length}"
+        resp_headers["Content-Length"] = content_length
 
-    if "Content-Length" in upstream.headers:
-        resp_headers["Content-Length"] = upstream.headers["Content-Length"]
+    def iter_chunks(size=64*1024):
+        for chunk in upstream.iter_content(chunk_size=size):
+            if chunk:
+                yield chunk
+        upstream.close()
 
-    def iter_chunks(chunk_size=64 * 1024):
-        try:
-            for chunk in upstream.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    yield chunk
-        finally:
-            upstream.close()
-
-    return StreamingResponse(iter_chunks(), status_code=206, media_type="video/mp4", headers=resp_headers)
-
+    return StreamingResponse(iter_chunks(), status_code=206, media_type=content_type, headers=resp_headers)
 
 
 # Modelo de dados
