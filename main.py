@@ -187,72 +187,134 @@ def listar_canais(
 
 
 
+# @app.get("/player/{idvideo}")
+# async def stream_mp4_video(idvideo: str, request: Request):
+#     try:
+#         # busca a URL no Mongo (tenta campo IdVideo, depois _id)
+#         colecao = get_mongo_collection()
+#         doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 1})
+#         if not doc:
+#             try:
+#                 oid = ObjectId(idvideo)
+#                 doc = colecao.find_one({"_id": oid}, {"Url": 1, "_id": 1})
+#             except Exception:
+#                 doc = None
+
+#         if not doc:
+#             raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+
+#         video_url = doc.get("Url") or doc.get("url")
+#         if not video_url:
+#             raise HTTPException(status_code=404, detail="URL do vídeo não encontrada no documento")
+
+#         headers = {"User-Agent": "Mozilla/5.0"}
+
+#         # repassa o header Range do cliente para o upstream quando presente
+#         range_header = request.headers.get("range")
+#         if range_header:
+#             headers["Range"] = range_header
+
+#         # faz a requisição ao servidor do vídeo com suporte a stream
+#         video_response = requests.get(video_url, stream=True, headers=headers, timeout=15)
+
+#         if video_response.status_code not in (200, 206):
+#             return StreamingResponse(
+#                 content=iter([f"Erro ao acessar o vídeo MP4: {video_response.status_code}".encode()]),
+#                 status_code=502,
+#                 media_type="text/plain"
+#             )
+
+#         response_headers = {"Accept-Ranges": "bytes"}
+#         if "Content-Length" in video_response.headers:
+#             response_headers["Content-Length"] = video_response.headers["Content-Length"]
+#         if "Content-Range" in video_response.headers:
+#             response_headers["Content-Range"] = video_response.headers["Content-Range"]
+#         if "Content-Type" in video_response.headers:
+#             content_type = video_response.headers["Content-Type"]
+#         else:
+#             content_type = "video/mp4"
+
+#         # Retorna o stream bruto do requests (raw) para o cliente com status adequado
+#         return StreamingResponse(
+#             video_response.raw,
+#             status_code=(206 if range_header else 200),
+#             media_type=content_type,
+#             headers=response_headers
+#         )
+
+#     except requests.exceptions.RequestException as e:
+#         return StreamingResponse(
+#             content=iter([f"Erro de rede ao acessar o vídeo: {str(e)}".encode()]),
+#             status_code=504,
+#             media_type="text/plain"
+#         )
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         return StreamingResponse(
+#             content=iter([f"Erro interno: {str(e)}".encode()]),
+#             status_code=500,
+#             media_type="text/plain"
+#         )
+
+
 @app.get("/player/{idvideo}")
 async def stream_mp4_video(idvideo: str, request: Request):
+    # busca a URL no Mongo (IdVideo ou _id)
+    colecao = get_mongo_collection()
+    doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 1})
+    if not doc:
+        try:
+            oid = ObjectId(idvideo)
+            doc = colecao.find_one({"_id": oid}, {"Url": 1, "_id": 1})
+        except Exception:
+            doc = None
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+
+    video_url = doc.get("Url") or doc.get("url")
+    if not video_url:
+        raise HTTPException(status_code=404, detail="URL do vídeo não encontrada no documento")
+
+    # repassa Range do cliente para o upstream
+    headers = {"User-Agent": "Mozilla/5.0"}
+    client_range = request.headers.get("range")
+    if client_range:
+        headers["Range"] = client_range
+
     try:
-        # busca a URL no Mongo (tenta campo IdVideo, depois _id)
-        colecao = get_mongo_collection()
-        doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 1})
-        if not doc:
+        upstream = requests.get(video_url, stream=True, headers=headers, timeout=20)
+    except requests.RequestException as e:
+        raise HTTPException(status_code=504, detail=f"Erro de rede ao acessar o vídeo upstream: {e}")
+
+    if upstream.status_code not in (200, 206):
+        raise HTTPException(status_code=502, detail=f"Upstream retornou status {upstream.status_code}")
+
+    # monta headers de resposta para o cliente; repassa os valores do upstream quando presentes
+    resp_headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Type": upstream.headers.get("Content-Type", "video/mp4")
+    }
+    if "Content-Range" in upstream.headers:
+        resp_headers["Content-Range"] = upstream.headers["Content-Range"]
+    if "Content-Length" in upstream.headers:
+        resp_headers["Content-Length"] = upstream.headers["Content-Length"]
+
+    # expõe headers úteis para clientes web (se estiver usando CORS, combine com CORSMiddleware)
+    resp_headers["Access-Control-Expose-Headers"] = "Content-Range, Content-Length, Accept-Ranges"
+
+    # generator que transmite em chunks e fecha a conexão upstream ao final
+    def iter_chunks(chunk_size: int = 64 * 1024):
+        try:
+            for chunk in upstream.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    yield chunk
+        finally:
             try:
-                oid = ObjectId(idvideo)
-                doc = colecao.find_one({"_id": oid}, {"Url": 1, "_id": 1})
+                upstream.close()
             except Exception:
-                doc = None
+                pass
 
-        if not doc:
-            raise HTTPException(status_code=404, detail="Vídeo não encontrado")
-
-        video_url = doc.get("Url") or doc.get("url")
-        if not video_url:
-            raise HTTPException(status_code=404, detail="URL do vídeo não encontrada no documento")
-
-        headers = {"User-Agent": "Mozilla/5.0"}
-
-        # repassa o header Range do cliente para o upstream quando presente
-        range_header = request.headers.get("range")
-        if range_header:
-            headers["Range"] = range_header
-
-        # faz a requisição ao servidor do vídeo com suporte a stream
-        video_response = requests.get(video_url, stream=True, headers=headers, timeout=15)
-
-        if video_response.status_code not in (200, 206):
-            return StreamingResponse(
-                content=iter([f"Erro ao acessar o vídeo MP4: {video_response.status_code}".encode()]),
-                status_code=502,
-                media_type="text/plain"
-            )
-
-        response_headers = {"Accept-Ranges": "bytes"}
-        if "Content-Length" in video_response.headers:
-            response_headers["Content-Length"] = video_response.headers["Content-Length"]
-        if "Content-Range" in video_response.headers:
-            response_headers["Content-Range"] = video_response.headers["Content-Range"]
-        if "Content-Type" in video_response.headers:
-            content_type = video_response.headers["Content-Type"]
-        else:
-            content_type = "video/mp4"
-
-        # Retorna o stream bruto do requests (raw) para o cliente com status adequado
-        return StreamingResponse(
-            video_response.raw,
-            status_code=(206 if range_header else 200),
-            media_type=content_type,
-            headers=response_headers
-        )
-
-    except requests.exceptions.RequestException as e:
-        return StreamingResponse(
-            content=iter([f"Erro de rede ao acessar o vídeo: {str(e)}".encode()]),
-            status_code=504,
-            media_type="text/plain"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        return StreamingResponse(
-            content=iter([f"Erro interno: {str(e)}".encode()]),
-            status_code=500,
-            media_type="text/plain"
-        )
+    status = 206 if client_range else 200
+    return StreamingResponse(iter_chunks(), status_code=status, media_type=resp_headers["Content-Type"], headers=resp_headers)
