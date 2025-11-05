@@ -176,7 +176,21 @@ def get_mongo_collection_grupo():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
-
+def get_mongo_collection_tv():
+    try:
+        client = MongoClient(
+            "mongodb+srv://teste:teste@cluster0.zjhbafz.mongodb.net/M3U?retryWrites=true&w=majority",
+            serverSelectionTimeoutMS=5000  # timeout de conexão
+        )
+        db = client["M3U"]
+        return db["tv"]
+    except errors.ServerSelectionTimeoutError:
+        raise HTTPException(status_code=503, detail="Não foi possível conectar ao MongoDB Atlas.")
+    except errors.ConfigurationError:
+        raise HTTPException(status_code=500, detail="Erro na configuração da string de conexão.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
+    
 
 @app.get("/canais", response_model=List[Canal])
 def listar_canais(
@@ -339,3 +353,34 @@ def listar_grupos(case_insensitive: gru.Optional[bool] = Query(False, descriptio
         raise HTTPException(status_code=500, detail=f"Erro no MongoDB: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+@app.get("/tv", response_model=List[Canal])
+def listar_canais(
+    group: str | None = Query(default=None, description="Filtrar por grupo"),
+    name: str | None = Query(default=None, description="Filtrar por nome"),
+    groupid: str | None = Query(default=None, description="Filtrar por groupid"),
+    limit: int = Query(default=10, ge=1, le=100, description="Número máximo de tv"),
+    skip: int = Query(default=0, ge=0, description="Número de tv a pular")
+):
+    try:
+        colecao = get_mongo_collection_tv()
+
+        filtro = {}
+        if group:
+            filtro["Grupo"] = {"$regex":group, "$options": "i"}
+        if name:
+            filtro["Nome"] = {"$regex": name, "$options": "i"}
+        if groupid:
+            filtro["grupoID"] = {"$regex": groupid, "$options": "i"}
+
+        canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1,"grupoID":1}).skip(skip).limit(limit))
+
+        if not canais:
+            raise HTTPException(status_code=404, detail="Nenhum canal encontrado com os filtros aplicados.")
+        return canais
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar tv: {str(e)}")
+
