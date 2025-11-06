@@ -390,3 +390,5 @@ def listar_tv(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar tv: {str(e)}")
 
+
+
