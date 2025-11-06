@@ -131,6 +131,14 @@ async def stream_mp4_video(request: Request):
         )
 
 
+# Modelo de dados
+class TV(BaseModel):
+    IdVideo: str | None
+    Nome: str | None
+    Grupo: str | None
+    Url: str | None
+    Logo: str | None
+
 
 
 # Modelo de dados
@@ -355,11 +363,10 @@ def listar_grupos(case_insensitive: gru.Optional[bool] = Query(False, descriptio
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@app.get("/tv", response_model=List[Canal])
-def listar_canais(
+@app.get("/canaisTv", response_model=List[TV])
+def listar_tv(
     group: str | None = Query(default=None, description="Filtrar por grupo"),
     name: str | None = Query(default=None, description="Filtrar por nome"),
-    groupid: str | None = Query(default=None, description="Filtrar por groupid"),
     limit: int = Query(default=10, ge=1, le=100, description="Número máximo de tv"),
     skip: int = Query(default=0, ge=0, description="Número de tv a pular")
 ):
@@ -371,10 +378,9 @@ def listar_canais(
             filtro["Grupo"] = {"$regex":group, "$options": "i"}
         if name:
             filtro["Nome"] = {"$regex": name, "$options": "i"}
-        if groupid:
-            filtro["grupoID"] = {"$regex": groupid, "$options": "i"}
+  
 
-        canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1,"grupoID":1}).skip(skip).limit(limit))
+        canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1}).skip(skip).limit(limit))
 
         if not canais:
             raise HTTPException(status_code=404, detail="Nenhum canal encontrado com os filtros aplicados.")

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Projetos\\Python\\backendTvSilve\\m3uparser\\M3UParser.csproj": {}
+    "C:\\Projetos\\Python\\backendTvSilve\\M3UParser\\M3UParser.csproj": {}
   },
   "projects": {
-    "C:\\Projetos\\Python\\backendTvSilve\\m3uparser\\M3UParser.csproj": {
+    "C:\\Projetos\\Python\\backendTvSilve\\M3UParser\\M3UParser.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Projetos\\Python\\backendTvSilve\\m3uparser\\M3UParser.csproj",
+        "projectUniqueName": "C:\\Projetos\\Python\\backendTvSilve\\M3UParser\\M3UParser.csproj",
         "projectName": "M3UParser",
-        "projectPath": "C:\\Projetos\\Python\\backendTvSilve\\m3uparser\\M3UParser.csproj",
+        "projectPath": "C:\\Projetos\\Python\\backendTvSilve\\M3UParser\\M3UParser.csproj",
         "packagesPath": "C:\\Users\\silva\\.nuget\\packages\\",
-        "outputPath": "C:\\Projetos\\Python\\backendTvSilve\\m3uparser\\obj\\",
+        "outputPath": "C:\\Projetos\\Python\\backendTvSilve\\M3UParser\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
