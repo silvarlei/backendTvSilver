@@ -299,7 +299,10 @@ async def stream_mp4_video(idvideo: str, request: Request):
     colecao = get_mongo_collection()
     doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 0})
     if not doc:
-        raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+        colecao = get_mongo_collection_tv()
+        doc = colecao.find_one({"IdVideo": idvideo}, {"Url": 1, "_id": 0})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Vídeo não encontrado")
 
     video_url = doc["Url"]
     headers = {"User-Agent": "Mozilla/5.0"}
