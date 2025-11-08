@@ -24,7 +24,7 @@ public class Program
         var parser = new M3UParser();
         try
         {
-            var items = await parser.ParseFromUrlAsync("https://raw.githubusercontent.com/Ramys/Iptv-Brasil-2025/refs/heads/master/Lista%20Online%2003.m3u8");
+            var items = await parser.ParseFromUrlAsync("https://raw.githubusercontent.com/Ramys/Iptv-Brasil-2025/refs/heads/master/Vivo%20Fibra.m3u");
             const string outputPath = "tv.json";
             await parser.SaveAsJsonAsync(items, outputPath);
             Console.WriteLine($"Arquivo JSON gerado em: {outputPath}");
