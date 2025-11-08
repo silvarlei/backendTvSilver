@@ -363,24 +363,41 @@ def listar_grupos(case_insensitive: gru.Optional[bool] = Query(False, descriptio
         raise HTTPException(status_code=500, detail=str(e))
     
 
-@app.get("/canaisTv", response_model=List[TV])
-def listar_tv(
-    group: str | None = Query(default=None, description="Filtrar por grupo"),
-    name: str | None = Query(default=None, description="Filtrar por nome"),
-    limit: int = Query(default=10, ge=1, le=100, description="Número máximo de tv"),
-    skip: int = Query(default=0, ge=0, description="Número de tv a pular")
-):
-    try:
-        colecao = get_mongo_collection_tv()
+# @app.get("/canaisTv", response_model=List[TV])
+# def listar_tv(
+#     group: str | None = Query(default=None, description="Filtrar por grupo"),
+#     name: str | None = Query(default=None, description="Filtrar por nome"),
+#     limit: int = Query(default=10, ge=1, le=100, description="Número máximo de tv"),
+#     skip: int = Query(default=0, ge=0, description="Número de tv a pular")
+# ):
+#     try:
+#         colecao = get_mongo_collection_tv()
 
-        filtro = {}
-        if group:
-            filtro["Grupo"] = {"$regex":group, "$options": "i"}
-        if name:
-            filtro["Nome"] = {"$regex": name, "$options": "i"}
+#         filtro = {}
+#         if group:
+#             filtro["Grupo"] = {"$regex":group, "$options": "i"}
+#         if name:
+#             filtro["Nome"] = {"$regex": name, "$options": "i"}
   
 
-        canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1}).skip(skip).limit(limit))
+#         canais = list(colecao.find(filtro,{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1}).skip(skip).limit(limit))
+
+#         if not canais:
+#             raise HTTPException(status_code=404, detail="Nenhum canal encontrado com os filtros aplicados.")
+#         return canais
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Erro ao buscar tv: {str(e)}")
+
+
+@app.get("/canaisTv", response_model=List[TV])
+def listar_tv():
+    try:
+        colecao = get_mongo_collection_tv()
+  
+
+        canais = list(colecao.find("",{"IdVideo": 1, "Nome": 1, "Grupo": 1, "Url": 1,"Logo":1}))
 
         if not canais:
             raise HTTPException(status_code=404, detail="Nenhum canal encontrado com os filtros aplicados.")
@@ -389,6 +406,5 @@ def listar_tv(
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar tv: {str(e)}")
-
 
 

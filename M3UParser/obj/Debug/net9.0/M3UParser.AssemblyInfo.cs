@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("M3UParser")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8edefcf987ab9f3dc1d07dddba1a439a87bce12b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+295e3b2504da5802c0f071827918da627804fc31")]
 [assembly: System.Reflection.AssemblyProductAttribute("M3UParser")]
 [assembly: System.Reflection.AssemblyTitleAttribute("M3UParser")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
